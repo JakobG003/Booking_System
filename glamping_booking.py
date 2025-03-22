@@ -622,14 +622,37 @@ Final Split After Cleaning and Extra Expenses:
 Tent owner share(65%): {profit_split['tent_owner_share']:.2f}€
 Glamping owner share(35%): {profit_split['glamping_owner_share']:.2f}€
 """
-    result_label.config(text=results)
+    result_text.config(state=tk.NORMAL)
+    result_text.delete(1.0, tk.END)
+    result_text.insert(tk.END, results)
+    result_text.config(state=tk.DISABLED)
 
 # Calculate button
 calculate_button = tk.Button(window, text="Calculate profit split:", command=display_calculation_results)
 calculate_button.pack(pady=10)
 
-result_label = tk.Label(window, text="", font=("Courier", 10,), justify=tk.LEFT)
-result_label.pack(pady=10)
+result_frame = tk.Frame(window, bg="SystemButtonFace")
+result_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+
+result_text = tk.Text(result_frame, 
+                      width=70, 
+                      height=15, 
+                      font=("Courier", 10), 
+                      state="disabled",
+                      bg="SystemButtonFace",
+                      relief="flat",
+                      padx=10,
+                      pady=10)
+scrollbar = ttk.Scrollbar(
+    result_frame,
+    orient=tk.VERTICAL,
+    command=result_text.yview,
+    style="Vertical.TScrollbar")
+
+result_text.config(yscrollcommand=scrollbar.set)
+
+result_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 
 window.mainloop()
