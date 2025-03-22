@@ -1,0 +1,55 @@
+import random 
+import keyboard
+ 
+def throw_dice():
+ return random.randint (1,6)
+ 
+players =  [
+ {"name": "player1", "points": 0},
+ {"name": "player2", "points": 0},
+ {"name": "player3", "points": 0}
+ ]
+current_player = 0
+
+
+while 50 > players[current_player]["points"]:
+ print(f"It's your round player {players[current_player]['name']}. Press space to throw the dice.")
+
+ keyboard.wait("space")
+
+ result = throw_dice()  
+
+ if result == 1:
+  print(f"You threw {result}. Your points from this round are deleted.")
+
+  current_player = (current_player +1) % len(players)
+
+ else:
+  players[current_player]["points"] += result 
+  print(f"You threw: {result} points. Your total points are: {players[current_player]['points']}.\n"  
+        f"Press ENTER if you want to hold your points and pass the throw to the next player. Or press SPACE to throw again.")
+    
+  while True:
+    if keyboard.wait("enter"):
+     print(f"Points from this round have been added to your total points. Now {players[current_player]['name']} total points are: {players[current_player]['points']}.")
+     current_player = (current_player + 1) % len(players)
+     break
+    
+    if keyboard.wait("space"):
+     players[current_player]["points"] += result 
+     print(f"You threw: {result} points. Your total points are: {players[current_player]['points']}.\n"  
+        f"Press ENTER if you want to hold your points and pass the throw to the next player. Or press SPACE to throw again.")
+     break    
+    
+      
+       
+        
+        
+
+
+
+
+
+  
+
+     
