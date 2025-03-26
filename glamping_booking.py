@@ -6,6 +6,8 @@ from tkcalendar import DateEntry
 from datetime import datetime, timedelta
 from tkinter import messagebox
 
+
+
 # Price zones
 price_zones_direct = [
     {"zone": "A", 
@@ -208,6 +210,7 @@ def open_settings():
                             font=("Arial", 10, "bold"))
     save_button.pack(pady=20)
 
+
 def save_zone_settings():
     zone_dates = {
         "A": {
@@ -282,12 +285,35 @@ def save_zone_settings():
     min_date, max_date = get_booking_date_range()
     check_in_date.config(mindate=min_date, maxdate=max_date)
     check_out_date.config(mindate=min_date, maxdate=max_date)
-    
-    
 
 
-settings_button = tk.Button(window, text="Date settings", command=open_settings)
-settings_button.pack(pady=10, anchor="w")
+
+def open_saved_reservation():
+    saved_window = tk.Toplevel(window)
+    saved_window.title("Saved Reservations")
+    saved_window.geometry("1200x600")
+
+
+    columns = ("Reservation Date", "Platform")
+    tree = ttk.Treeview(saved_window, columns=columns, show="headings")
+
+    for col in columns:
+        tree.heading(col, text=col)
+        tree.column(col, width=150)
+
+    tree.pack(fill="both", expand=True)
+    
+    
+button_frame = tk.Frame(window)
+button_frame.pack(pady=10, anchor ='w')
+
+settings_button = tk.Button(button_frame, text="Date settings", command=open_settings)
+settings_button.pack(side=tk.LEFT, padx=5)
+
+saved_reservation_button = tk.Button(button_frame, text="Saved reservations", command=open_saved_reservation)
+saved_reservation_button.pack(side=tk.LEFT, padx=5)
+
+
 
 #get the booking date range
 def get_booking_date_range():
@@ -630,6 +656,50 @@ Glamping owner share(35%): {profit_split['glamping_owner_share']:.2f}€
 # Calculate button
 calculate_button = tk.Button(window, text="Calculate profit split:", command=display_calculation_results)
 calculate_button.pack(pady=10)
+
+
+
+def save_reservation():
+    # Get all the important data
+    reservation_data = {
+        "reservation_date": entry_reservation_date.get_date().strftime("%d.%m.%Y"),
+        "booking_platform": entry_booking_platform.get(),
+        "tent_number": entry_tent_number.get(),
+        "guest_country": entry_guest_county.get(),
+        "guest_name": entry_guest_name.get(),
+        "number_of_guests": entry_number_of_guests.get(),
+        "check_in_date": check_in_date.get_date().strftime("%d.%m.%Y"),
+        "check_out_date": check_out_date.get_date().strftime("%d.%m.%Y"),
+        "cleaning": entry_cleaning_cost.get(),
+        "extra_expenses": entry_extra_expenses.get(),
+        "calculation_results": calculate_stay(),
+        "profit_split": calculate_profit_split()
+    }
+
+    try:
+        # Try to load existing reservations
+        try:
+            with open("reservations.json", "r") as f:
+                reservations = json.load(f)
+        except FileNotFoundError:
+            reservations = []  # If file doesn't exist, start with empty list
+        
+        # Add new reservation
+        reservations.append(reservation_data)
+        
+        # Save all reservations back to file
+        with open("reservations.json", "w") as f:
+            json.dump(reservations, f, indent=4)
+            
+        messagebox.showinfo("Success", "Reservation saved!")
+        
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not save reservation: {str(e)}")
+
+# Update your save button to use this function
+save_button = tk.Button(window, text="Save reservation", command=save_reservation)        
+save_button.pack(pady=10)
+
 
 result_frame = tk.Frame(window, bg="SystemButtonFace")
 result_frame.pack(pady=10, fill=tk.BOTH, expand=True)
