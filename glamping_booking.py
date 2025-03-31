@@ -5,7 +5,15 @@ from tkinter import ttk
 from tkcalendar import DateEntry
 from datetime import datetime, timedelta
 from tkinter import messagebox
+from pathlib import Path
 
+
+# getting paths
+def get_data_path():
+    base_dir = Path(__file__).parent
+    data_dir = base_dir / "data"
+    data_dir.mkdir(exist_ok=True)
+    return data_dir / "reservations.json"
 
 
 # Price zones
@@ -294,7 +302,20 @@ def open_saved_reservation():
     saved_window.geometry("1200x600")
 
 
-    columns = ("Reservation Date", "Platform")
+    columns = (
+        "reservation_date",
+        "booking_platform",
+        "tent_number",
+        "guest_country", 
+        "guest_name", 
+        "number_of_guests", 
+        "check_in_date", 
+        "check_out_date", 
+        "Number_of_nights", 
+        "cleaning", 
+        "extra_expenses", 
+        "calculation_results", 
+        "profit_split")
     tree = ttk.Treeview(saved_window, columns=columns, show="headings")
 
     for col in columns:
@@ -303,15 +324,135 @@ def open_saved_reservation():
 
     tree.pack(fill="both", expand=True)
     
+def view_reservations():
+    data_file = get_data_path()
     
+    try:
+        if not data_file.exists():
+            messagebox.showinfo("Info", "No reservations found")
+            return
+
+        with open(data_file, "r") as f:
+            reservations = json.load(f)
+
+        # Create the view/edit window
+        view_window = tk.Toplevel(window)
+        view_window.title("Manage Reservations")
+        view_window.geometry("1000x600")
+
+        # Treeview to display reservations
+        columns = ("ID", "Guest", "Check-In", "Check-Out", "Nights", "Tent", "Platform")
+        tree = ttk.Treeview(view_window, columns=columns, show="headings")
+        
+        # Set column headings
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=120)
+
+        # Add data to treeview
+        for r in reservations:
+            tree.insert("", "end", values=(
+                r.get("reservation_id", ""),
+                r.get("guest_name", ""),
+                r.get("check_in_date", ""),
+                r.get("check_out_date", ""),
+                r.get("Number of nights", ""),
+                r.get("tent_number", ""),
+                r.get("booking_platform", "")
+            ))
+
+        tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Frame for buttons
+        button_frame = tk.Frame(view_window)
+        button_frame.pack(pady=10)
+
+        # Edit Button
+        def edit_selected():
+            selected = tree.focus()
+            if not selected:
+                messagebox.showwarning("Warning", "Please select a reservation")
+                return
+            
+            # Get reservation ID
+            res_id = tree.item(selected)["values"][0]
+            edit_reservation(res_id)  # We'll create this function next
+
+        tk.Button(button_frame, text="✏️ Edit", command=edit_selected).pack(side="left", padx=5)
+
+        # Delete Button
+        def delete_selected():
+            selected = tree.focus()
+            if not selected:
+                messagebox.showwarning("Warning", "Please select a reservation")
+                return
+            
+            res_id = tree.item(selected)["values"][0]
+            if messagebox.askyesno("Confirm", "Delete this reservation?"):
+                # Remove from list and save
+                updated = [r for r in reservations if r.get("reservation_id") != res_id]
+                with open(data_file, "w") as f:
+                    json.dump(updated, f, indent=4)
+                tree.delete(selected)
+                messagebox.showinfo("Success", "Reservation deleted")
+
+        tk.Button(button_frame, text="🗑️ Delete", command=delete_selected).pack(side="left", padx=5)
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Cannot load reservations: {e}")
+
+
+def edit_reservation(reservation_id):
+    data_file = get_data_path()
+    
+    try:
+        with open(data_file, "r") as f:
+            reservations = json.load(f)
+        
+        # Find the reservation
+        reservation = next((r for r in reservations if r.get("reservation_id") == reservation_id), None)
+        if not reservation:
+            messagebox.showerror("Error", "Reservation not found")
+            return
+
+        # Create edit window
+        edit_window = tk.Toplevel()
+        edit_window.title(f"Edit Reservation {reservation_id[:8]}...")
+        edit_window.geometry("600x400")
+
+        # Form fields (similar to your main window)
+        tk.Label(edit_window, text="Guest Name:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+        name_entry = tk.Entry(edit_window)
+        name_entry.grid(row=0, column=1, sticky="w")
+        name_entry.insert(0, reservation.get("guest_name", ""))
+
+        # Add more fields as needed (dates, tent number, etc.)
+        # ...
+
+        def save_changes():
+            # Update reservation data
+            reservation["guest_name"] = name_entry.get()
+            # Update other fields...
+            
+            # Save back to file
+            with open(data_file, "w") as f:
+                json.dump(reservations, f, indent=4)
+            messagebox.showinfo("Success", "Changes saved")
+            edit_window.destroy()
+
+        tk.Button(edit_window, text="Save", command=save_changes).grid(row=10, columnspan=2, pady=10)
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Cannot edit reservation: {e}")
+
 button_frame = tk.Frame(window)
 button_frame.pack(pady=10, anchor ='w')
 
 settings_button = tk.Button(button_frame, text="Date settings", command=open_settings)
 settings_button.pack(side=tk.LEFT, padx=5)
 
-saved_reservation_button = tk.Button(button_frame, text="Saved reservations", command=open_saved_reservation)
-saved_reservation_button.pack(side=tk.LEFT, padx=5)
+view_reservations_button = tk.Button(button_frame, text="View Reservations", command=view_reservations)
+view_reservations_button.pack(side=tk.LEFT, padx=5)
 
 
 
@@ -427,13 +568,13 @@ entry_tent_number.pack(side=tk.LEFT)
 entry_tent_number.set("Select tent number")
 
 # Guest Country
-gueast_country_name = tk.Frame(window)
-gueast_country_name.pack(pady=10, anchor="w")
+guest_country_name = tk.Frame(window)
+guest_country_name.pack(pady=10, anchor="w")
 
-label_guest_county = tk.Label(gueast_country_name, text="Guest country:")
+label_guest_county = tk.Label(guest_country_name, text="Guest country:")
 label_guest_county.pack(side=tk.LEFT)
 
-entry_guest_county = tk.Entry(gueast_country_name)
+entry_guest_county = tk.Entry(guest_country_name)
 entry_guest_county.pack(side=tk.LEFT)
 
 # Guest name
@@ -660,7 +801,8 @@ calculate_button.pack(pady=10)
 
 
 def save_reservation():
-    # Get all the important data
+    global reservation_data
+    # Pridobi vse podatke
     reservation_data = {
         "reservation_date": entry_reservation_date.get_date().strftime("%d.%m.%Y"),
         "booking_platform": entry_booking_platform.get(),
@@ -670,34 +812,77 @@ def save_reservation():
         "number_of_guests": entry_number_of_guests.get(),
         "check_in_date": check_in_date.get_date().strftime("%d.%m.%Y"),
         "check_out_date": check_out_date.get_date().strftime("%d.%m.%Y"),
+        "Number of nights": (check_out_date.get_date() - check_in_date.get_date()).days,  # Spremenjeno iz set v int
         "cleaning": entry_cleaning_cost.get(),
         "extra_expenses": entry_extra_expenses.get(),
         "calculation_results": calculate_stay(),
         "profit_split": calculate_profit_split()
     }
 
+    # Preveri podatke
+    required_fields = {
+        "reservation_date": "Reservation date is required!",
+        "booking_platform": "Booking platform is required!",
+        "tent_number": "Tent number is required!",
+        "guest_country": "Guest country is required!",
+        "guest_name": "Guest name is required!",
+        "number_of_guests": "Number of guests is required!",
+        "check_in_date": "Check-in date is required!",
+        "check_out_date": "Check-out date is required!",
+        "Number of nights": "Number of nights is required!",
+        "cleaning": "Cleaning cost is required!",
+        "extra_expenses": "Extra expenses are required!",
+        "calculation_results": "Calculation results are required!",
+        "profit_split": "Profit split is required!"
+    }
+
+    for field, error_message in required_fields.items():
+        if not reservation_data.get(field):
+            messagebox.showerror("Error", error_message)
+            return False  # Vrnemo False, če validacija ni uspešna
+    
+    return True  # Vrnemo True, če je validacija uspešna
+
+
+def load_reservation():
+    # First validate and prepare the data
+    if not save_reservation():
+        return  # Validation failed
+    
+    data_file = get_data_path()  # Get the proper file path
+    
     try:
-        # Try to load existing reservations
+        # Try to read existing reservations
         try:
-            with open("reservations.json", "r") as f:
-                reservations = json.load(f)
-        except FileNotFoundError:
-            reservations = []  # If file doesn't exist, start with empty list
-        
+            if data_file.exists():
+                with open(data_file, "r") as f:  # Use data_file, not hardcoded name
+                    content = f.read()
+                    reservations = json.loads(content) if content.strip() else []
+            else:
+                reservations = []
+        except json.JSONDecodeError:
+            reservations = []
+            messagebox.showwarning("Warning", "Corrupted data file, creating new one")
+
         # Add new reservation
         reservations.append(reservation_data)
         
-        # Save all reservations back to file
-        with open("reservations.json", "w") as f:
-            json.dump(reservations, f, indent=4)
+        # Save back to file
+        with open(data_file, "w") as f:  # Use data_file here too
+            json.dump(reservations, f, indent=4, ensure_ascii=False)
             
         messagebox.showinfo("Success", "Reservation saved!")
         
     except Exception as e:
         messagebox.showerror("Error", f"Could not save reservation: {str(e)}")
 
-# Update your save button to use this function
-save_button = tk.Button(window, text="Save reservation", command=save_reservation)        
+
+# Posodobljen gumb
+save_button = tk.Button(
+    window, 
+    text="Save reservation", 
+    command=load_reservation  # Zdaj bo najprej validiral, nato shranil
+)
 save_button.pack(pady=10)
 
 

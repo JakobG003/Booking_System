@@ -1,0 +1,28 @@
+[
+    {
+        "reservation_date": "31.03.2025",
+        "booking_platform": "manual",
+        "tent_number": "tent 3",
+        "guest_country": "5",
+        "guest_name": "iuh",
+        "number_of_guests": "6",
+        "check_in_date": "01.06.2025",
+        "check_out_date": "10.06.2025",
+        "Number of nights": 9,
+        "cleaning": "yes",
+        "extra_expenses": "10",
+        "calculation_results": {
+            "total_price": 1080.0,
+            "original_price": 1080.0,
+            "platform_fee": 0,
+            "extra_expenses": 10.0,
+            "platform_fee_in_percentage": 0
+        },
+        "profit_split": {
+            "tent_owner_share": 682.0,
+            "glamping_owner_share": 358.0,
+            "cleaning_cost": 30,
+            "total_price": 1080.0
+        }
+    }
+]
