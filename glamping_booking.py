@@ -295,155 +295,219 @@ def save_zone_settings():
     check_out_date.config(mindate=min_date, maxdate=max_date)
 
 
-
-def open_saved_reservation():
-    saved_window = tk.Toplevel(window)
-    saved_window.title("Saved Reservations")
-    saved_window.geometry("1200x600")
-
-
-    columns = (
-        "reservation_date",
-        "booking_platform",
-        "tent_number",
-        "guest_country", 
-        "guest_name", 
-        "number_of_guests", 
-        "check_in_date", 
-        "check_out_date", 
-        "Number_of_nights", 
-        "cleaning", 
-        "extra_expenses", 
-        "calculation_results", 
-        "profit_split")
-    tree = ttk.Treeview(saved_window, columns=columns, show="headings")
-
-    for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, width=150)
-
-    tree.pack(fill="both", expand=True)
-    
 def view_reservations():
     data_file = get_data_path()
     
     try:
+        # Check if file exists and has content
         if not data_file.exists():
-            messagebox.showinfo("Info", "No reservations found")
+            messagebox.showinfo("Info", "No reservations found. Create your first reservation.")
             return
 
         with open(data_file, "r") as f:
-            reservations = json.load(f)
+            content = f.read()
+            reservations = json.loads(content) if content.strip() else []
 
-        # Create the view/edit window
+        if not reservations:
+            messagebox.showinfo("Info", "No reservations found")
+            return
+
+        # Create the view window
         view_window = tk.Toplevel(window)
         view_window.title("Manage Reservations")
-        view_window.geometry("1000x600")
+        view_window.geometry("1000x550")  # Increased height for better button spacing
 
-        # Treeview to display reservations
-        columns = ("ID", "Guest", "Check-In", "Check-Out", "Nights", "Tent", "Platform")
-        tree = ttk.Treeview(view_window, columns=columns, show="headings")
+        # Create frame for treeview and scrollbar
+        tree_frame = tk.Frame(view_window)
+        tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Treeview with scrollbar
+        columns = ("ID", "Guest", "Tent", "Check-In", "Check-Out", "Nights", "Platform")
+        tree = ttk.Treeview(tree_frame, columns=columns, show="headings")
         
-        # Set column headings
-        for col in columns:
+        # Add vertical scrollbar
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="right", fill="y")
+        tree.pack(side="left", fill="both", expand=True)
+
+        # Configure columns
+        col_widths = [50, 150, 80, 100, 100, 60, 120]
+        for col, width in zip(columns, col_widths):
             tree.heading(col, text=col)
-            tree.column(col, width=120)
+            tree.column(col, width=width, anchor="center")
 
         # Add data to treeview
         for r in reservations:
             tree.insert("", "end", values=(
-                r.get("reservation_id", ""),
+                r.get("id", ""),
                 r.get("guest_name", ""),
+                r.get("tent_number", ""),
                 r.get("check_in_date", ""),
                 r.get("check_out_date", ""),
-                r.get("Number of nights", ""),
-                r.get("tent_number", ""),
-                r.get("booking_platform", "")
+                r.get("Number_of_nights", ""),  
+                r.get("booking_platform", ""),
             ))
 
-        tree.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Frame for buttons
+        # Create button frame at bottom
         button_frame = tk.Frame(view_window)
-        button_frame.pack(pady=10)
+        button_frame.pack(fill="x", padx=10, pady=(0, 10))
 
-        # Edit Button
-        def edit_selected():
+        # Button styling
+        btn_style = {"padx": 10, "pady": 5, "width": 15}
+
+        def view_reservation_details():
+            selected = tree.focus()
+            if not selected:
+                messagebox.showwarning("Warning", "Please select a reservation first.")
+                return
+            
+            res_id = tree.item(selected)["values"][0]
+            reservation = next((r for r in reservations if r.get("id") == res_id), None)
+            
+            if not reservation:
+                messagebox.showerror("Error", "Reservation not found")
+                return
+            
+            # Create detail window
+            detail_window = tk.Toplevel(view_window)
+            detail_window.title(f"Reservation Details - ID {res_id}")
+            detail_window.geometry("600x800")
+
+            # Create scrollable container
+            main_frame = tk.Frame(detail_window)
+            main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+            canvas = tk.Canvas(main_frame)
+            scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+            scrollable_frame = tk.Frame(canvas)
+
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+            
+            canvas.create_window((0,0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+
+            # Display title
+            tk.Label(scrollable_frame, 
+                   text="FULL RESERVATION DETAILS", 
+                   font=("Arial", 14, "bold")).pack(pady=10)
+
+            # Section definitions
+            sections = [
+                ("Basic Information", [
+                    ("Reservation ID", "id"),
+                    ("Reservation Date", "reservation_date"),
+                    ("Booking Platform", "booking_platform"),
+                    ("Tent Number", "tent_number")
+                ]),
+                ("Guest Information", [
+                    ("Guest Name", "guest_name"),
+                    ("Guest Country", "guest_country"),
+                    ("Number of Guests", "number_of_guests")
+                ]),
+                ("Dates", [
+                    ("Check-In Date", "check_in_date"),
+                    ("Check-Out Date", "check_out_date"),
+                    ("Number of Nights", "number_of_nights")  # Fixed key
+                ]),
+                ("Financial Information", [
+                    ("Cleaning Cost", "cleaning"),
+                    ("Extra Expenses", "extra_expenses"),
+                    ("Calculation Results", "calculation_results"),
+                    ("Profit Split", "profit_split")
+                ])
+            ]
+            
+            # Display sections
+            for section_title, fields in sections:
+                # Section header
+                tk.Label(scrollable_frame, 
+                        text=section_title, 
+                        font=("Arial", 12, "bold"),
+                        anchor="w").pack(fill="x", pady=(10, 5))
+                
+                # Section content frame
+                frame = tk.Frame(scrollable_frame, bd=1, relief="solid", padx=5, pady=5)
+                frame.pack(fill="x", padx=5, pady=5)
+                
+                # Display each field
+                for label_text, field_key in fields:
+                    value = reservation.get(field_key, "N/A")
+                    if isinstance(value, dict):
+                        value = "\n".join(f"{k}: {v}" for k, v in value.items())
+                    
+                    row_num = len(frame.winfo_children())//2  # Calculate row number
+                    
+                    tk.Label(frame, text=f"{label_text}:", 
+                           font=("Arial", 10, "bold")).grid(
+                           row=row_num, column=0, sticky="w", padx=5, pady=2)
+                    tk.Label(frame, text=value, wraplength=400, 
+                           justify="left").grid(
+                           row=row_num, column=1, sticky="w", padx=5, pady=2)
+            
+            # Close button
+            tk.Button(scrollable_frame, 
+                     text="Close", 
+                     command=detail_window.destroy).pack(pady=10)
+
+        def delete_reservation():
             selected = tree.focus()
             if not selected:
                 messagebox.showwarning("Warning", "Please select a reservation")
                 return
             
-            # Get reservation ID
             res_id = tree.item(selected)["values"][0]
-            edit_reservation(res_id)  # We'll create this function next
-
-        tk.Button(button_frame, text="✏️ Edit", command=edit_selected).pack(side="left", padx=5)
-
-        # Delete Button
-        def delete_selected():
-            selected = tree.focus()
-            if not selected:
-                messagebox.showwarning("Warning", "Please select a reservation")
-                return
             
-            res_id = tree.item(selected)["values"][0]
             if messagebox.askyesno("Confirm", "Delete this reservation?"):
-                # Remove from list and save
-                updated = [r for r in reservations if r.get("reservation_id") != res_id]
-                with open(data_file, "w") as f:
-                    json.dump(updated, f, indent=4)
-                tree.delete(selected)
-                messagebox.showinfo("Success", "Reservation deleted")
+                try:
+                    # Filter out the deleted reservation
+                    updated_reservations = [r for r in reservations if r.get("id") != res_id]
+                    
+                    # Save to file
+                    with open(data_file, "w") as f:
+                        json.dump(updated_reservations, f, indent=4)
+                    
+                    # Update UI
+                    tree.delete(selected)
+                    messagebox.showinfo("Success", "Reservation deleted.")
+                    
+                    # Update our local reservations list
+                    reservations[:] = updated_reservations
+                    
+                    # Close window if no reservations left
+                    if not reservations:
+                        view_window.destroy()
+                        
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to delete: {e}")
 
-        tk.Button(button_frame, text="🗑️ Delete", command=delete_selected).pack(side="left", padx=5)
+        # Create action buttons
+        view_btn = tk.Button(button_frame, 
+                           text="View Details", 
+                           command=view_reservation_details,
+                           **btn_style)
+        view_btn.pack(side="left", padx=5)
+
+        delete_btn = tk.Button(button_frame, 
+                             text="Delete", 
+                             command=delete_reservation,
+                             **btn_style)
+        delete_btn.pack(side="left", padx=5)
+
+        close_btn = tk.Button(button_frame, 
+                            text="Close", 
+                            command=view_window.destroy,
+                            **btn_style)
+        close_btn.pack(side="right", padx=5)
 
     except Exception as e:
         messagebox.showerror("Error", f"Cannot load reservations: {e}")
-
-
-def edit_reservation(reservation_id):
-    data_file = get_data_path()
-    
-    try:
-        with open(data_file, "r") as f:
-            reservations = json.load(f)
-        
-        # Find the reservation
-        reservation = next((r for r in reservations if r.get("reservation_id") == reservation_id), None)
-        if not reservation:
-            messagebox.showerror("Error", "Reservation not found")
-            return
-
-        # Create edit window
-        edit_window = tk.Toplevel()
-        edit_window.title(f"Edit Reservation {reservation_id[:8]}...")
-        edit_window.geometry("600x400")
-
-        # Form fields (similar to your main window)
-        tk.Label(edit_window, text="Guest Name:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
-        name_entry = tk.Entry(edit_window)
-        name_entry.grid(row=0, column=1, sticky="w")
-        name_entry.insert(0, reservation.get("guest_name", ""))
-
-        # Add more fields as needed (dates, tent number, etc.)
-        # ...
-
-        def save_changes():
-            # Update reservation data
-            reservation["guest_name"] = name_entry.get()
-            # Update other fields...
-            
-            # Save back to file
-            with open(data_file, "w") as f:
-                json.dump(reservations, f, indent=4)
-            messagebox.showinfo("Success", "Changes saved")
-            edit_window.destroy()
-
-        tk.Button(edit_window, text="Save", command=save_changes).grid(row=10, columnspan=2, pady=10)
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Cannot edit reservation: {e}")
 
 button_frame = tk.Frame(window)
 button_frame.pack(pady=10, anchor ='w')
@@ -451,7 +515,8 @@ button_frame.pack(pady=10, anchor ='w')
 settings_button = tk.Button(button_frame, text="Date settings", command=open_settings)
 settings_button.pack(side=tk.LEFT, padx=5)
 
-view_reservations_button = tk.Button(button_frame, text="View Reservations", command=view_reservations)
+view_reservations_button = tk.Button(button_frame, text="View Reservations", 
+                                   command=view_reservations)
 view_reservations_button.pack(side=tk.LEFT, padx=5)
 
 
@@ -812,7 +877,7 @@ def save_reservation():
         "number_of_guests": entry_number_of_guests.get(),
         "check_in_date": check_in_date.get_date().strftime("%d.%m.%Y"),
         "check_out_date": check_out_date.get_date().strftime("%d.%m.%Y"),
-        "Number of nights": (check_out_date.get_date() - check_in_date.get_date()).days,  # Spremenjeno iz set v int
+        "Number of nights": (check_out_date.get_date() - check_in_date.get_date()).days,  
         "cleaning": entry_cleaning_cost.get(),
         "extra_expenses": entry_extra_expenses.get(),
         "calculation_results": calculate_stay(),
@@ -843,9 +908,13 @@ def save_reservation():
     
     return True  # Vrnemo True, če je validacija uspešna
 
-
+reservation_data = {}
 def load_reservation():
-    # First validate and prepare the data
+    global reservation_data
+    # Check if there is already this ID
+    if 'id' in reservation_data:
+        del reservation_data['id']  
+    # Validate and prepare the data
     if not save_reservation():
         return  # Validation failed
     
@@ -855,7 +924,7 @@ def load_reservation():
         # Try to read existing reservations
         try:
             if data_file.exists():
-                with open(data_file, "r") as f:  # Use data_file, not hardcoded name
+                with open(data_file, "r") as f:  
                     content = f.read()
                     reservations = json.loads(content) if content.strip() else []
             else:
@@ -864,6 +933,10 @@ def load_reservation():
             reservations = []
             messagebox.showwarning("Warning", "Corrupted data file, creating new one")
 
+        # Generate new ID (1 if empty, otherwise max + 1)
+        new_id = 1 if not reservations else max(r.get('id', 0) for r in reservations) + 1
+        reservation_data['id'] = new_id  # Add ID to current reservation
+
         # Add new reservation
         reservations.append(reservation_data)
         
@@ -871,17 +944,17 @@ def load_reservation():
         with open(data_file, "w") as f:  # Use data_file here too
             json.dump(reservations, f, indent=4, ensure_ascii=False)
             
-        messagebox.showinfo("Success", "Reservation saved!")
+        messagebox.showinfo("Success", f"Reservation saved with ID: {new_id}")
         
     except Exception as e:
         messagebox.showerror("Error", f"Could not save reservation: {str(e)}")
 
 
-# Posodobljen gumb
+
 save_button = tk.Button(
     window, 
     text="Save reservation", 
-    command=load_reservation  # Zdaj bo najprej validiral, nato shranil
+    command=load_reservation  
 )
 save_button.pack(pady=10)
 
