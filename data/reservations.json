@@ -1,83 +1,56 @@
 [
     {
-        "reservation_date": "05.04.2025",
+        "reservation_date": "07.04.2025",
         "booking_platform": "direct",
-        "tent_number": "tent 2",
-        "guest_country": "uibnukk",
-        "guest_name": "krgn",
+        "tent_number": "tent 3",
+        "guest_country": "Slovenija",
+        "guest_name": "Jakob",
         "number_of_guests": "4",
         "check_in_date": "01.06.2025",
-        "check_out_date": "11.06.2025",
-        "Number of nights": 10,
+        "check_out_date": "10.06.2025",
+        "Number of nights": 9,
         "cleaning": "yes",
         "extra_expenses": "10",
         "calculation_results": {
-            "total_price": 1500,
-            "original_price": 1500,
+            "total_price": 1350,
+            "original_price": 1350,
             "platform_fee": 0,
             "extra_expenses": 10.0,
             "platform_fee_in_percentage": 0
         },
         "profit_split": {
-            "tent_owner_share": 955.0,
-            "glamping_owner_share": 505.0,
+            "tent_owner_share": 857.5,
+            "glamping_owner_share": 452.5,
             "cleaning_cost": 30,
-            "total_price": 1500
+            "total_price": 1350
         },
         "id": 1
     },
     {
-        "reservation_date": "05.04.2025",
-        "booking_platform": "direct",
-        "tent_number": "tent 3",
-        "guest_country": ",ljn",
-        "guest_name": "èlkmn",
-        "number_of_guests": "5",
+        "reservation_date": "07.04.2025",
+        "booking_platform": "airbnb",
+        "tent_number": "tent 4",
+        "guest_country": "Nizozemska",
+        "guest_name": "Vinke",
+        "number_of_guests": "4",
         "check_in_date": "01.06.2025",
-        "check_out_date": "11.06.2025",
-        "Number of nights": 10,
+        "check_out_date": "10.06.2025",
+        "Number of nights": 9,
         "cleaning": "yes",
         "extra_expenses": "10",
         "calculation_results": {
-            "total_price": 1500,
-            "original_price": 1500,
-            "platform_fee": 0,
+            "total_price": 1291.5,
+            "original_price": 1575,
+            "platform_fee": 283.5,
             "extra_expenses": 10.0,
-            "platform_fee_in_percentage": 0
-        },
-        "profit_split": {
-            "tent_owner_share": 955.0,
-            "glamping_owner_share": 505.0,
-            "cleaning_cost": 30,
-            "total_price": 1500
-        },
-        "id": 2
-    },
-    {
-        "reservation_date": "05.04.2025",
-        "booking_platform": "airbnb",
-        "tent_number": "tent 5(far right)",
-        "guest_country": "kjb",
-        "guest_name": "luzfztcd",
-        "number_of_guests": "5",
-        "check_in_date": "01.06.2025",
-        "check_out_date": "17.06.2025",
-        "Number of nights": 16,
-        "cleaning": "yes",
-        "extra_expenses": "50",
-        "calculation_results": {
-            "total_price": 2296.0,
-            "original_price": 2800,
-            "platform_fee": 504.0,
-            "extra_expenses": 50.0,
             "platform_fee_in_percentage": "18"
         },
         "profit_split": {
-            "tent_owner_share": 1452.4,
-            "glamping_owner_share": 763.6,
+            "tent_owner_share": 819.48,
+            "glamping_owner_share": 432.02,
             "cleaning_cost": 30,
-            "total_price": 2296.0
+            "total_price": 1291.5
         },
-        "id": 3
+        "id": 2
     }
 ]

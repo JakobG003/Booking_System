@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 from tkinter import messagebox
 from pathlib import Path
 
+window = tk.Tk()
+window.title("booking Program")
+window.geometry("800x600")
 
 # getting paths
 def get_data_path():
@@ -106,11 +109,6 @@ def load_from_file():
         pass
 
 load_from_file()
-
-window = tk.Tk()
-window.title("booking Program")
-window.geometry("1600x1200")
-
 
 #date settings
 def open_settings():
@@ -296,6 +294,7 @@ def save_zone_settings():
 
 
 def view_reservations():
+
     data_file = get_data_path()
     
     try:
@@ -345,7 +344,7 @@ def view_reservations():
                 r.get("tent_number", ""),
                 r.get("check_in_date", ""),
                 r.get("check_out_date", ""),
-                r.get("Number_of_nights", ""),  
+                r.get("Number of nights", ""),  
                 r.get("booking_platform", ""),
             ))
 
@@ -397,6 +396,8 @@ def view_reservations():
             tk.Label(scrollable_frame, 
                    text="FULL RESERVATION DETAILS", 
                    font=("Arial", 14, "bold")).pack(pady=10)
+            
+
 
             # Section definitions
             sections = [
@@ -414,7 +415,7 @@ def view_reservations():
                 ("Dates", [
                     ("Check-In Date", "check_in_date"),
                     ("Check-Out Date", "check_out_date"),
-                    ("Number of Nights", "number_of_nights")  # Fixed key
+                    ("Number of Nights", "Number_of_nights")  
                 ]),
                 ("Financial Information", [
                     ("Cleaning Cost", "cleaning"),
@@ -423,6 +424,8 @@ def view_reservations():
                     ("Profit Split", "profit_split")
                 ])
             ]
+
+        
             
             # Display sections
             for section_title, fields in sections:
@@ -509,6 +512,102 @@ def view_reservations():
     except Exception as e:
         messagebox.showerror("Error", f"Cannot load reservations: {e}")
 
+
+
+class ProfitCalculator:
+            def __init__(self, reservations=None):
+                self.glamping_net_profit = 0.0
+                self.tent_owners_share = 0.0
+                self.processed_reservations = 0
+                if reservations:
+                    self.process_reservations(reservations)
+
+            def process_reservations(self, reservations):
+                for r in reservations:
+                    try:
+                        profit_data = r.get("profit_split", {})
+                        self.glamping_net_profit += float(profit_data.get("glamping_owner_share", 0))
+                        self.tent_owners_share += float(profit_data.get("tent_owner_share", 0))
+                        self.processed_reservations += 1
+                    except (ValueError, TypeError, AttributeError) as e:
+                        continue 
+
+            def get_summary(self):
+                return {
+                    "total_glamping_profit": round(self.glamping_net_profit, 2),
+                    "total_tent_owners_share": round(self.tent_owners_share, 2),
+                    "combined_profit": round(self.glamping_net_profit + self.tent_owners_share, 2),
+                    "processed_reservations": self.processed_reservations
+                }
+
+def show_profit_summary():
+    data_file = get_data_path()
+    
+    try:
+        # Check if file exists and has content
+        if not data_file.exists():
+            messagebox.showinfo("Info", "No reservations found. Create your first reservation.")
+            return
+
+        with open(data_file, "r") as f:
+            content = f.read()
+            reservations = json.loads(content) if content.strip() else []
+
+        if not reservations:
+            messagebox.showinfo("Info", "No reservations found")
+            return
+        
+        
+        calculator = ProfitCalculator(reservations) 
+        summary = calculator.get_summary()
+        
+        profit_window = tk.Toplevel(window)
+        profit_window.title("Profit Summary Report")
+        profit_window.geometry("1000x550")
+
+        # Create main frame with padding
+        main_frame = tk.Frame(profit_window, padx=20, pady=20)
+        main_frame.pack(fill="both", expand=True)
+        
+        # Title
+        tk.Label(main_frame, 
+                text="PROFIT SUMMARY REPORT", 
+                font=("Arial", 16, "bold")).pack(pady=(0, 20))
+        
+        # Create frame for summary details
+        summary_frame = tk.LabelFrame(main_frame, text="Summary", padx=10, pady=10)
+        summary_frame.pack(fill="x", pady=10)
+        
+        # Display summary information
+        summary_items = [
+            ("Total Glamping Profit:", f"{summary['total_glamping_profit']}€"),
+            ("Total Tent Owners Share:", f"{summary['total_tent_owners_share']}€"),
+            ("Combined Profit:", f"{summary['combined_profit']}€"),
+            ("Total Processed Reservations:", str(summary['processed_reservations']))
+        ]
+        
+        for label, value in summary_items:
+            item_frame = tk.Frame(summary_frame)
+            item_frame.pack(fill="x", pady=5)
+            
+            tk.Label(item_frame, 
+                    text=label, 
+                    font=("Arial", 10, "bold")).pack(side="left")
+            tk.Label(item_frame, 
+                    text=value, 
+                    font=("Arial", 10)).pack(side="right")
+        
+        # Add close button
+        tk.Button(main_frame, 
+                text="Close", 
+                command=profit_window.destroy,
+                width=15).pack(pady=20)
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Error generating profit summary: {str(e)}")
+             
+
+
 button_frame = tk.Frame(window)
 button_frame.pack(pady=10, anchor ='w')
 
@@ -519,7 +618,8 @@ view_reservations_button = tk.Button(button_frame, text="View Reservations",
                                    command=view_reservations)
 view_reservations_button.pack(side=tk.LEFT, padx=5)
 
-
+profit_view_window = tk.Button(button_frame, text="Profit Summary Report", command=show_profit_summary)
+profit_view_window.pack(side=tk.LEFT, padx=5)
 
 #get the booking date range
 def get_booking_date_range():
@@ -767,7 +867,7 @@ def calculate_stay():
 
         else:
             total_price = original_price
-            
+        
     return {
         "total_price": total_price,
         "original_price": original_price,
@@ -775,6 +875,7 @@ def calculate_stay():
         "extra_expenses": extra_expenses,
         "platform_fee_in_percentage": platform_fee_in_percentage
     }
+    
 
 # Calculate profit split
 def calculate_profit_split():
@@ -981,6 +1082,7 @@ result_text.config(yscrollcommand=scrollbar.set)
 
 result_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
 
 
 window.mainloop()
