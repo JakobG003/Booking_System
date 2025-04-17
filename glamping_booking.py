@@ -6,18 +6,56 @@ from tkcalendar import DateEntry
 from datetime import datetime, timedelta
 from tkinter import messagebox
 from pathlib import Path
+import sys
+
 
 window = tk.Tk()
 window.title("booking Program")
 window.geometry("800x600")
 
-# getting paths
-def get_data_path():
-    base_dir = Path(__file__).parent
-    data_dir = base_dir / "data"
-    data_dir.mkdir(exist_ok=True)
-    return data_dir / "reservations.json"
 
+def get_data_path(filename=None):
+    """Pridobi absolutno pot do datoteke v data mapi, deluje za dev in PyInstaller"""
+    try:
+        # PyInstaller ustvari temp mapo in shrani pot v _MEIPASS
+        base_path = sys._MEIPASS if getattr(sys, 'frozen', False) else Path(__file__).parent
+    except Exception:
+        base_path = Path(__file__).parent
+    
+    data_dir = Path(base_path) / "data"
+    data_dir.mkdir(exist_ok=True)  # Ustvari mapo če ne obstaja
+    
+    if filename:
+        return data_dir / filename
+    return data_dir
+
+def save_to_file():
+    """Shrani nastavitve con v datoteko"""
+    try:
+        settings_file = get_data_path("zones_settings.json")
+        with open(settings_file, "w", encoding="utf-8") as f:
+            json.dump(platform_prices, f, indent=4, ensure_ascii=False)
+        print(f"Settings saved to: {settings_file}")  # Debug izpis
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to save settings: {str(e)}")
+
+def load_from_file():
+    """Naloži nastavitve con iz datoteke"""
+    global price_zones_direct, price_zones_airbnb, price_zones_booking
+    
+    try:
+        settings_file = get_data_path("zones_settings.json")
+        if settings_file.exists():
+            with open(settings_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                price_zones_direct = data.get("direct", price_zones_direct)
+                price_zones_airbnb = data.get("airbnb", price_zones_airbnb)
+                price_zones_booking = data.get("booking", price_zones_booking)
+            print(f"Settings loaded from: {settings_file}")  # Debug izpis
+    except json.JSONDecodeError:
+        messagebox.showwarning("Warning", "Corrupted settings file, using defaults")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to load settings: {str(e)}")
 
 # Price zones
 price_zones_direct = [
@@ -91,22 +129,6 @@ platform_prices = {
     "airbnb": price_zones_airbnb,
     "booking": price_zones_booking
 }
-
-#save and load settings
-def save_to_file():
-    with open("zones_settings.json", "w") as f:
-        json.dump(platform_prices, f, indent=4)
-
-def load_from_file():
-    global price_zones_direct, price_zones_airbnb, price_zones_booking
-    try:
-        with open("zones_settings.json", "r") as f:
-            data = json.load(f)
-            price_zones_direct = data["direct"]
-            price_zones_airbnb = data["airbnb"]
-            price_zones_booking = data["booking"]
-    except FileNotFoundError:
-        pass
 
 load_from_file()
 
@@ -294,16 +316,15 @@ def save_zone_settings():
 
 
 def view_reservations():
-
-    data_file = get_data_path()
-    
     try:
-        # Check if file exists and has content
+        data_file = get_data_path("reservations.json")
+        print(f"Looking for reservations at: {data_file}")
+        
         if not data_file.exists():
-            messagebox.showinfo("Info", "No reservations found. Create your first reservation.")
+            messagebox.showinfo("Info", f"No reservations found at:\n{str(data_file)}")
             return
 
-        with open(data_file, "r") as f:
+        with open(data_file, "r", encoding="utf-8") as f:
             content = f.read()
             reservations = json.loads(content) if content.strip() else []
 
@@ -314,7 +335,7 @@ def view_reservations():
         # Create the view window
         view_window = tk.Toplevel(window)
         view_window.title("Manage Reservations")
-        view_window.geometry("1000x550")  # Increased height for better button spacing
+        view_window.geometry("1000x550")  
 
         # Create frame for treeview and scrollbar
         tree_frame = tk.Frame(view_window)
@@ -396,8 +417,6 @@ def view_reservations():
             tk.Label(scrollable_frame, 
                    text="FULL RESERVATION DETAILS", 
                    font=("Arial", 14, "bold")).pack(pady=10)
-            
-
 
             # Section definitions
             sections = [
@@ -424,8 +443,6 @@ def view_reservations():
                     ("Profit Split", "profit_split")
                 ])
             ]
-
-        
             
             # Display sections
             for section_title, fields in sections:
@@ -445,7 +462,7 @@ def view_reservations():
                     if isinstance(value, dict):
                         value = "\n".join(f"{k}: {v}" for k, v in value.items())
                     
-                    row_num = len(frame.winfo_children())//2  # Calculate row number
+                    row_num = len(frame.winfo_children())//2
                     
                     tk.Label(frame, text=f"{label_text}:", 
                            font=("Arial", 10, "bold")).grid(
@@ -469,21 +486,16 @@ def view_reservations():
             
             if messagebox.askyesno("Confirm", "Delete this reservation?"):
                 try:
-                    # Filter out the deleted reservation
                     updated_reservations = [r for r in reservations if r.get("id") != res_id]
                     
-                    # Save to file
                     with open(data_file, "w") as f:
                         json.dump(updated_reservations, f, indent=4)
                     
-                    # Update UI
                     tree.delete(selected)
                     messagebox.showinfo("Success", "Reservation deleted.")
                     
-                    # Update our local reservations list
                     reservations[:] = updated_reservations
                     
-                    # Close window if no reservations left
                     if not reservations:
                         view_window.destroy()
                         
@@ -510,7 +522,7 @@ def view_reservations():
         close_btn.pack(side="right", padx=5)
 
     except Exception as e:
-        messagebox.showerror("Error", f"Cannot load reservations: {e}")
+        messagebox.showerror("Error", f"Cannot load reservations:\n{str(e)}")
 
 
 
@@ -541,7 +553,7 @@ class ProfitCalculator:
                 }
 
 def show_profit_summary():
-    data_file = get_data_path()
+    data_file = get_data_path("reservations.json")
     
     try:
         # Check if file exists and has content
@@ -1019,7 +1031,7 @@ def load_reservation():
     if not save_reservation():
         return  # Validation failed
     
-    data_file = get_data_path()  # Get the proper file path
+    data_file = get_data_path("reservations.json")  
     
     try:
         # Try to read existing reservations
